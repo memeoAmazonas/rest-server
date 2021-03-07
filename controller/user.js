@@ -3,54 +3,69 @@ const bcryptjs = require('bcryptjs');
 
 const User = require('../model/user');
 
-const getUser = (req, res = response) => {
-    const {id, name = "no name", otro = "no description"} = req.query;
-    res.json({
-        msg: "desde el controlador user get",
-        id,
-        name,
-        otro
-    })
+const getUser = async (req, res = response) => {
+    const {init = 0, limit = 5} = req.query;
+
+    const query = {state: true};
+    // funciona, sin embargo es menos eficiente ya que como no son dependientes, se debe esperar a  que se resuelvan las
+    // promesas 1 a 1, en cambio con el promise.all se ejecutan ambas en paralelo y hasta que no se resuelven ambas no retorna
+    // esto es utilo siempre y cuando sean independientes
+    /*const total = await User.countDocuments(query);
+    const users = await User.find(query)
+        .skip(Number(init))
+        .limit(Number(limit))*/
+    const [total, users] = await Promise.all([
+        User.countDocuments(query),
+        User.find(query)
+            .skip(Number(init))
+            .limit(Number(limit))
+    ])
+    res.json({total, users})
 }
-const putUser = (req, res = response) => {
+const putUser = async (req, res = response) => {
     const id = req.params.id;
-    res.json({
-        msg: "desde el controlador user put",
-        id,
-    })
+    const {_id, pasword, google, ...info} = req.body;
+    if (pasword) {
+        info.password = bcryptjs.hashSync(bcryptjs.genSaltSync());
+    }
+    const user = await User.findByIdAndUpdate(id, info);
+    res.json({user})
 }
 const postUser = async (req, res = response) => {
 
-        const {name, email, password, role} = req.body;
-        const user = new User({name, email, password, role});
+    const {name, email, password, role} = req.body;
+    const user = new User({name, email, password, role});
+    /*
+    la validacion de existencia se realiza antes de llegar al punto de abajo, se realiza con un middleware que estan
+    helper/validator-db.
+    */
+    //encrypt password
+    user.password = bcryptjs.hashSync(bcryptjs.genSaltSync());
 
-        //verificar si existe el email
-        const existEmail = await User.findOne({email});
-        if (existEmail) {
-            return res.status(400).json({
-                msg: 'Ya existe un usuario registrado con ese email'
-            });
-        }
+    await user.save();
 
-        //encrypt password
-        user.password = bcryptjs.hashSync(bcryptjs.genSaltSync());
+    res.status(201).json({
+        msg: "usuario creado exitosamente",
+        user,
+    })
 
-        await user.save();
-        res.status(201).json({
-            msg: "usuario creado exitosamente",
-            email,
-        })
-    /*} catch (e) {
-        res.status(500).json({
-            msg: 'Error creando el usuario en bd'
-        })
-        throw new Error('Error creando el usuario', e);
-    }*/
 }
 
-const deleteUser = (req, res = response) => {
+const deleteUser = async (req, res = response) => {
+    const { id } =req.params;
+
+    /*
+    Esta forma no es recomendable por temas de integridad
+    const user = await User.findByIdAndDelete(id);
+     */
+    /*
+    este borrado es logico, para mantener la integridad de la bd
+     */
+    const user = await User.findByIdAndUpdate(id, { state: false});
+
+
     res.json({
-        msg: "desde el controlador user delete"
+        user,
     })
 }
 
