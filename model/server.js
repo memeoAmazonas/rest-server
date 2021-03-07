@@ -1,12 +1,20 @@
+const { dbConection } = require("../database/config");
+
 const express = require('express');
 const cors = require('cors');
+
 class Server {
     constructor() {
         this.app = express();
         this.port = process.env.PORT;
-        this.userPath ='/api/user'
+        this.userPath = '/api/user'
+        this.connectDB();
         this.middlewares();
         this.routes();
+    }
+
+    async connectDB() {
+        await dbConection();
     }
 
     middlewares() {
@@ -22,7 +30,7 @@ class Server {
     listen() {
         this.app.listen(this.port, () => {
             console.clear();
-            console.log("se esta ejecutando en el puerto ", this.port);
+            console.log("servidor se esta ejecutando en el puerto ", this.port);
         });
 
     }
