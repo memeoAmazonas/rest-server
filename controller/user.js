@@ -24,8 +24,8 @@ const getUser = async (req, res = response) => {
 }
 const putUser = async (req, res = response) => {
     const id = req.params.id;
-    const {_id, pasword, google, ...info} = req.body;
-    if (pasword) {
+    const {_id, password, google, ...info} = req.body;
+    if (password) {
         info.password = bcryptjs.hashSync(bcryptjs.genSaltSync());
     }
     const user = await User.findByIdAndUpdate(id, info);
@@ -40,7 +40,8 @@ const postUser = async (req, res = response) => {
     helper/validator-db.
     */
     //encrypt password
-    user.password = bcryptjs.hashSync(bcryptjs.genSaltSync());
+    const salt = bcryptjs.genSaltSync();
+    user.password = bcryptjs.hashSync( password, salt );
 
     await user.save();
 
@@ -53,7 +54,7 @@ const postUser = async (req, res = response) => {
 
 const deleteUser = async (req, res = response) => {
     const { id } =req.params;
-
+    const { userAuthenticate } = req;
     /*
     Esta forma no es recomendable por temas de integridad
     const user = await User.findByIdAndDelete(id);
@@ -63,9 +64,9 @@ const deleteUser = async (req, res = response) => {
      */
     const user = await User.findByIdAndUpdate(id, { state: false});
 
-
     res.json({
         user,
+        userAuthenticate,
     })
 }
 
