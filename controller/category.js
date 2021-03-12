@@ -1,5 +1,6 @@
 const {response} = require('express');
 const { Category } = require('../model')
+
 const createCategory = async (req, res = response) => {
     const { name } = req.body;
     const { userAuthenticate: user } = req;
@@ -8,7 +9,8 @@ const createCategory = async (req, res = response) => {
     if (category){
       return  res.status(400).json({ msg: 'ya existe la categoria', category});
     }else {
-        category = new Category({ name, user: user._id});
+        console.log(user, user._id);
+        category = new Category({ name: name.toUpperCase(), user: user._id});
         await category.save();
     }
 
@@ -21,13 +23,44 @@ const createCategory = async (req, res = response) => {
 
 const getAllCategory = async (req, res ) => {
     const {init = 0, limit = 5} = req.query;
+    const query = { state: true};
+    const [total, categories] = await Promise.all([
+        Category.countDocuments(query),
+        Category.find(query)
 
-    const [total, users] = await Promise.all([
-        Category.countDocuments(),
-        Category.find()
+            .populate('user','name')
             .skip(Number(init))
             .limit(Number(limit))
     ])
-    res.json({total, users})
+    res.json({total, categories})
 }
-module.exports = {createCategory, getAllCategory}
+
+const getCategoyById = async (req, res)=> {
+    const {id} = req.params;
+    const category = await Category.findById(id).populate('user', 'name');
+    res.json({
+        category,
+    })
+}
+const putCategory  = async (req, res)=> {
+    const { state, user, ...data} = req.body;
+    const { userAuthenticate } = req;
+    const { id } = req.params;
+    data.name = data.name.toUpperCase();
+    data.user = userAuthenticate._id;
+    const category = await Category.findByIdAndUpdate(id, data, {new: true});
+    res.json({
+    category,
+    })
+
+}
+
+const deleteCategory = async (req, res)=> {
+    const { id } = req.params;
+    const category = await Category.findByIdAndUpdate(id, { state: false}, { new: true });
+    res.json({
+        category,
+    })
+
+}
+module.exports = {createCategory, getAllCategory, getCategoyById, putCategory, deleteCategory}

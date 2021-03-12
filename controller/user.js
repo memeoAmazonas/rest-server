@@ -28,7 +28,8 @@ const putUser = async (req, res = response) => {
     if (password) {
         info.password = bcryptjs.hashSync(bcryptjs.genSaltSync());
     }
-    const user = await User.findByIdAndUpdate(id, info);
+    //{new: true} sirve para que se vean reflejados los cambios en la respuesta.
+    const user = await User.findByIdAndUpdate(id, info, {new: true});
     res.json({user})
 }
 const postUser = async (req, res = response) => {
